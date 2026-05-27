@@ -1,0 +1,22 @@
+{
+  "date": "2026-05-28",
+  "stack": "Digitizer production agents",
+  "description": "Full Notary integration across 5 agents, 3 write surfaces, 7 sessions",
+  "facts_analyzed": 819,
+  "governance_score": 1.0,
+  "stability_score": 1.0,
+  "provenance_coverage": 1.0,
+  "agents": [
+    "agent-memory",
+    "agent-tasks",
+    "agent-content",
+    "agent-research",
+    "agent-comms"
+  ],
+  "surfaces": [
+    "user_profile",
+    "task_state",
+    "session_context"
+  ],
+  "note": "Benchmark run on 2026-05-28. Zero violations across all 819 facts."
+}

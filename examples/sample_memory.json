@@ -1,0 +1,288 @@
+{
+  "facts": [
+    {
+      "fact_id": "f001",
+      "content": "User prefers concise responses, no bullet lists in casual chat.",
+      "agent_id": "agent-preferences",
+      "session_id": "sess-001",
+      "timestamp": "2026-05-01T09:12:00Z",
+      "surface": "user_profile",
+      "lifecycle": "permanent",
+      "confidence": 0.95,
+      "overwrite_of": null,
+      "tags": ["preference", "communication"]
+    },
+    {
+      "fact_id": "f002",
+      "content": "Active project: migrate data pipeline to async workers.",
+      "agent_id": "agent-tasks",
+      "session_id": "sess-001",
+      "timestamp": "2026-05-01T09:15:00Z",
+      "surface": "task_state",
+      "lifecycle": "session",
+      "confidence": 1.0,
+      "overwrite_of": null,
+      "tags": ["project", "engineering"]
+    },
+    {
+      "fact_id": "f003",
+      "content": "User timezone: UTC+3.",
+      "agent_id": "agent-preferences",
+      "session_id": "sess-001",
+      "timestamp": "2026-05-01T09:13:00Z",
+      "surface": "user_profile",
+      "lifecycle": "permanent",
+      "confidence": 1.0,
+      "overwrite_of": null,
+      "tags": ["preference"]
+    },
+    {
+      "fact_id": "f004",
+      "content": "Meeting with team scheduled for Friday 14:00.",
+      "agent_id": "agent-calendar",
+      "session_id": "sess-002",
+      "timestamp": "2026-05-03T11:00:00Z",
+      "surface": "calendar",
+      "lifecycle": "volatile",
+      "confidence": 1.0,
+      "overwrite_of": null,
+      "tags": ["calendar"]
+    },
+    {
+      "fact_id": "f005",
+      "content": "User's preferred stack: Python, FastAPI, Postgres.",
+      "agent_id": "agent-preferences",
+      "session_id": "sess-002",
+      "timestamp": "2026-05-03T11:05:00Z",
+      "surface": "user_profile",
+      "lifecycle": "permanent",
+      "confidence": 0.9,
+      "overwrite_of": null,
+      "tags": ["preference", "engineering"]
+    },
+    {
+      "fact_id": "f006",
+      "content": "Pipeline migration: async workers branch ready for review.",
+      "agent_id": "agent-tasks",
+      "session_id": "sess-002",
+      "timestamp": "2026-05-03T12:00:00Z",
+      "surface": "task_state",
+      "lifecycle": "session",
+      "confidence": 1.0,
+      "overwrite_of": "f002",
+      "tags": ["project", "engineering"]
+    },
+    {
+      "fact_id": "f007",
+      "content": "User does NOT prefer concise responses — wants full explanations.",
+      "agent_id": "agent-summarizer",
+      "session_id": "sess-003",
+      "timestamp": "2026-05-05T10:00:00Z",
+      "surface": "user_profile",
+      "lifecycle": "permanent",
+      "confidence": 0.7,
+      "overwrite_of": "f001",
+      "tags": ["preference", "communication"]
+    },
+    {
+      "fact_id": "f008",
+      "content": "Draft email to CTO re: infrastructure cost review.",
+      "agent_id": "agent-email",
+      "session_id": "sess-003",
+      "timestamp": "2026-05-05T10:30:00Z",
+      "surface": "drafts",
+      "lifecycle": "volatile",
+      "confidence": 1.0,
+      "overwrite_of": null,
+      "tags": ["email", "draft"]
+    },
+    {
+      "fact_id": "f009",
+      "content": "User budget for cloud infra: $2,000/month.",
+      "agent_id": "agent-finance",
+      "session_id": "sess-003",
+      "timestamp": "2026-05-05T10:45:00Z",
+      "surface": "user_profile",
+      "lifecycle": "permanent",
+      "confidence": 0.85,
+      "overwrite_of": null,
+      "tags": ["finance", "preference"]
+    },
+    {
+      "fact_id": "f010",
+      "content": "Reminder: follow up on PR #412 by EOD.",
+      "agent_id": "agent-tasks",
+      "session_id": "sess-004",
+      "timestamp": "2026-05-07T08:00:00Z",
+      "surface": "task_state",
+      "lifecycle": "volatile",
+      "confidence": 1.0,
+      "overwrite_of": null,
+      "tags": ["task", "engineering"]
+    },
+    {
+      "fact_id": "f011",
+      "content": "User's name is Alex.",
+      "agent_id": "",
+      "session_id": "sess-004",
+      "timestamp": "2026-05-07T08:05:00Z",
+      "surface": "user_profile",
+      "lifecycle": "permanent",
+      "confidence": 1.0,
+      "overwrite_of": null,
+      "tags": ["identity"]
+    },
+    {
+      "fact_id": "f012",
+      "content": "LLM API cost last month: $340.",
+      "agent_id": "agent-finance",
+      "session_id": "sess-004",
+      "timestamp": "2026-05-07T09:00:00Z",
+      "surface": "finance_log",
+      "lifecycle": "permanent",
+      "confidence": 1.0,
+      "overwrite_of": null,
+      "tags": ["finance"]
+    },
+    {
+      "fact_id": "f013",
+      "content": "User prefers dark mode in all tools.",
+      "agent_id": "agent-preferences",
+      "session_id": "sess-005",
+      "timestamp": "2026-05-09T14:00:00Z",
+      "surface": "user_profile",
+      "lifecycle": "permanent",
+      "confidence": 0.95,
+      "overwrite_of": null,
+      "tags": ["preference", "ui"]
+    },
+    {
+      "fact_id": "f014",
+      "content": "Deployment to staging completed successfully.",
+      "agent_id": "agent-devops",
+      "session_id": "sess-005",
+      "timestamp": "2026-05-09T15:30:00Z",
+      "surface": "task_state",
+      "lifecycle": "session",
+      "confidence": 1.0,
+      "overwrite_of": null,
+      "tags": ["deployment", "engineering"]
+    },
+    {
+      "fact_id": "f015",
+      "content": "User cloud budget updated to $2,500/month after board approval.",
+      "agent_id": "agent-finance",
+      "session_id": "sess-005",
+      "timestamp": "2026-05-09T16:00:00Z",
+      "surface": "user_profile",
+      "lifecycle": "permanent",
+      "confidence": 1.0,
+      "overwrite_of": "f009",
+      "tags": ["finance", "preference"]
+    },
+    {
+      "fact_id": "f016",
+      "content": "Next quarterly review: 2026-07-01.",
+      "agent_id": "agent-calendar",
+      "session_id": "sess-006",
+      "timestamp": "2026-05-12T10:00:00Z",
+      "surface": "calendar",
+      "lifecycle": "permanent",
+      "confidence": 1.0,
+      "overwrite_of": null,
+      "tags": ["calendar"]
+    },
+    {
+      "fact_id": "f017",
+      "content": "User speaks Hebrew and English.",
+      "agent_id": "agent-preferences",
+      "session_id": "sess-006",
+      "timestamp": "2026-05-12T10:05:00Z",
+      "surface": "user_profile",
+      "lifecycle": "permanent",
+      "confidence": 1.0,
+      "overwrite_of": null,
+      "tags": ["preference", "language"]
+    },
+    {
+      "fact_id": "f018",
+      "content": "Onboarding flow redesign: in progress.",
+      "agent_id": "agent-tasks",
+      "session_id": "sess-006",
+      "timestamp": "2026-05-12T11:00:00Z",
+      "surface": "task_state",
+      "lifecycle": "session",
+      "confidence": 0.9,
+      "overwrite_of": null,
+      "tags": ["project", "product"]
+    },
+    {
+      "fact_id": "f019",
+      "content": "User's GitHub handle: alex-builds.",
+      "agent_id": "agent-preferences",
+      "session_id": "sess-007",
+      "timestamp": "2026-05-14T09:00:00Z",
+      "surface": "user_profile",
+      "lifecycle": "permanent",
+      "confidence": 1.0,
+      "overwrite_of": null,
+      "tags": ["identity"]
+    },
+    {
+      "fact_id": "f020",
+      "content": "Cached search result: top JS frameworks 2026.",
+      "agent_id": "agent-search",
+      "session_id": "sess-007",
+      "timestamp": "2026-05-14T09:15:00Z",
+      "surface": "search_cache",
+      "lifecycle": "volatile",
+      "confidence": 1.0,
+      "overwrite_of": null,
+      "tags": ["cache", "search"]
+    }
+  ],
+  "authorities": [
+    {
+      "agent_id": "agent-preferences",
+      "allowed_surfaces": ["user_profile"],
+      "can_overwrite": true,
+      "max_confidence_claim": 1.0
+    },
+    {
+      "agent_id": "agent-tasks",
+      "allowed_surfaces": ["task_state"],
+      "can_overwrite": true,
+      "max_confidence_claim": 1.0
+    },
+    {
+      "agent_id": "agent-calendar",
+      "allowed_surfaces": ["calendar"],
+      "can_overwrite": false,
+      "max_confidence_claim": 1.0
+    },
+    {
+      "agent_id": "agent-email",
+      "allowed_surfaces": ["drafts"],
+      "can_overwrite": false,
+      "max_confidence_claim": 1.0
+    },
+    {
+      "agent_id": "agent-finance",
+      "allowed_surfaces": ["finance_log", "user_profile"],
+      "can_overwrite": true,
+      "max_confidence_claim": 1.0
+    },
+    {
+      "agent_id": "agent-devops",
+      "allowed_surfaces": ["task_state"],
+      "can_overwrite": false,
+      "max_confidence_claim": 1.0
+    },
+    {
+      "agent_id": "agent-search",
+      "allowed_surfaces": ["search_cache"],
+      "can_overwrite": true,
+      "max_confidence_claim": 1.0
+    }
+  ]
+}
