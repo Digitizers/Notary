@@ -1,22 +1,19 @@
 {
-  "date": "2026-05-28",
+  "date": "2026-05-29",
   "stack": "Digitizer production agents",
-  "description": "Full Notary integration across 5 agents, 3 write surfaces, 7 sessions",
-  "facts_analyzed": 819,
+  "description": "Public summary of an internal Notary governance scan. This file is not a raw memory export.",
+  "facts_analyzed": 1393,
   "governance_score": 1.0,
   "stability_score": 1.0,
   "provenance_coverage": 1.0,
-  "agents": [
-    "agent-memory",
-    "agent-tasks",
-    "agent-content",
-    "agent-research",
-    "agent-comms"
+  "authorship_known_coverage": 0.6604,
+  "missing_agent_id": 0,
+  "missing_timestamp": 0,
+  "duplicate_conflicts_unresolved": 0,
+  "public_fields_redacted": [
+    "actor_names",
+    "surface_names",
+    "raw_fact_content"
   ],
-  "surfaces": [
-    "user_profile",
-    "task_state",
-    "session_context"
-  ],
-  "note": "Benchmark run on 2026-05-28. Zero violations across all 819 facts."
+  "note": "Benchmark run on 2026-05-29. Zero governance/provenance/stability violations across 1393 facts. Authorship certainty is tracked separately and should not be folded into the governance score."
 }

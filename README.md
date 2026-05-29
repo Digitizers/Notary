@@ -33,29 +33,34 @@ It is not a memory store. It does not do retrieval. It governs what goes in and 
 ## Our production numbers
 
 ```
-notary score results/digitizer-production.json
+cat results/digitizer-production.json
 ```
 
 ```
 Notary Benchmark Results
 ────────────────────────────────────────
-  Facts analyzed:        819
+  Facts analyzed:        1,393
   Governance score:      1.00
   Stability score:       1.00
   Provenance coverage:   1.00
+  Authorship-known:      0.6604
 ────────────────────────────────────────
 
 No violations found.
-Perfect score. Your memory stack is fully governed.
 ```
+
+`results/digitizer-production.json` is a public summary of an internal production scan, not a raw memory export. We keep original authorship certainty separate from governance/provenance; unknown authorship stays unknown rather than being rewritten to make a metric look cleaner.
 
 ---
 
 ## What does your stack score?
 
+Clone the repo and run the benchmark locally:
+
 ```bash
-pip install notary-bench
-notary score your_memory.json
+git clone https://github.com/Digitizers/notary
+cd notary
+python -m benchmark.runner your_memory.json
 ```
 
 Input: a JSON export of your agent memory store.  
@@ -64,7 +69,7 @@ Output: governance score, stability score, provenance coverage, and a list of vi
 Try it on the included example first:
 
 ```bash
-notary score examples/sample_memory.json
+python -m benchmark.runner examples/sample_memory.json
 ```
 
 Expected output (the sample is intentionally imperfect):
