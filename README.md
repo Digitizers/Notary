@@ -60,7 +60,7 @@ Clone the repo and run the benchmark locally:
 ```bash
 git clone https://github.com/Digitizers/notary
 cd notary
-python -m benchmark.runner your_memory.json
+python3 -m benchmark.runner your_memory.json
 ```
 
 Input: a JSON export of your agent memory store.  
@@ -69,7 +69,7 @@ Output: governance score, stability score, provenance coverage, and a list of vi
 Try it on the included example first:
 
 ```bash
-python -m benchmark.runner examples/sample_memory.json
+python3 -m benchmark.runner examples/sample_memory.json
 ```
 
 Expected output (the sample is intentionally imperfect):

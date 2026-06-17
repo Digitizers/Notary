@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  benchmark-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate JSON fixtures
+        run: |
+          python -m json.tool examples/sample_memory.json > /tmp/sample_memory.json
+          python -m json.tool results/digitizer-production.json > /tmp/digitizer-production.json
+
+      - name: Compile Python modules
+        run: |
+          python -m py_compile benchmark/runner.py benchmark/scoring.py notary/spec.py
+
+      - name: Run sample benchmark
+        run: |
+          python -m benchmark.runner examples/sample_memory.json
