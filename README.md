@@ -1,6 +1,6 @@
 # Most AI memory projects are solving the wrong problem.
 
-MemPalace just published results showing 96.6% retrieval accuracy — zero LLMs, raw text and vector search. mem0, LightRAG, letta, the whole field is competing on the same axis: *how accurately can I retrieve the right fact?*
+MemPalace recently reported 96.6% LongMemEval Recall@5 — zero LLMs in the retrieval path, raw text and vector search. mem0, LightRAG, letta, the whole field is competing on the same axis: *how reliably can I retrieve the right memory?*
 
 We were asking that too, until we hit something the benchmarks don't measure.
 
@@ -135,9 +135,9 @@ Your memory export should follow this shape:
 
 ## MemPalace is right, and wrong
 
-MemPalace is right that raw verbatim text beats LLM extraction for retrieval accuracy.
+MemPalace is right that raw verbatim text can work surprisingly well for retrieval recall.
 
-But retrieval accuracy assumes the memory was worth keeping.
+But retrieval recall assumes the memory was worth keeping.
 
 Garbage in, garbage out — at 96.6% recall.
 
