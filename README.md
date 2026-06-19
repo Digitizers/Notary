@@ -100,6 +100,12 @@ The implementation that powers our production stack is not in this repository. T
 
 ---
 
+## Related
+
+- [Notary Memory Kit](https://github.com/Digitizers/notary-memory-kit) — early synthetic companion demo for preparing governed memory evidence for Notary-compatible benchmark review. Not packaged, released, or production-supported.
+
+---
+
 ## Memory format
 
 Your memory export should follow this shape:
