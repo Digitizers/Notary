@@ -242,6 +242,28 @@ class ScoringTests(unittest.TestCase):
         self.assertEqual(len(violations), 2)
         self.assertTrue(all("session boundary crossed" in v for v in violations))
 
+    def test_lifecycle_orders_records_by_parsed_time_across_utc_offsets(self):
+        # 10:00+02:00 is 08:00Z — earlier than the 09:30Z overwrite even
+        # though it sorts later lexicographically.
+        score, violations = lifecycle_adherence_score([
+            valid_fact(
+                fact_id="f001",
+                lifecycle="session",
+                session_id="sess-001",
+                timestamp="2026-05-01T10:00:00+02:00",
+            ),
+            valid_fact(
+                fact_id="f002",
+                lifecycle="session",
+                session_id="sess-002",
+                overwrite_of="f001",
+                timestamp="2026-05-01T09:30:00Z",
+            ),
+        ])
+
+        self.assertEqual(score, 0.0)
+        self.assertTrue(any("session boundary crossed" in violation for violation in violations))
+
     def test_lifecycle_ignores_overwrites_of_facts_outside_the_snapshot(self):
         score, violations = lifecycle_adherence_score([
             valid_fact(fact_id="f002", overwrite_of="f-not-here"),

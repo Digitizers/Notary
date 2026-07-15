@@ -14,7 +14,17 @@ Scores are 0.0–1.0. Higher is better.
 from __future__ import annotations
 
 from collections import Counter
-from typing import Any, Dict, List, Tuple
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
+
+
+def _parse_timestamp(value: Any) -> Optional[datetime]:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
 
 
 def _confidence_in_range(value: Any) -> bool:
@@ -194,10 +204,19 @@ def lifecycle_adherence_score(facts: List[Dict[str, Any]]) -> Tuple[float, List[
             by_id.setdefault(fact_id, []).append((index, f))
 
     def _is_prior(target_index: int, target: Dict[str, Any], index: int, fact: Dict[str, Any]) -> bool:
-        target_ts = target.get("timestamp") or ""
-        fact_ts = fact.get("timestamp") or ""
-        if target_ts and fact_ts and target_ts != fact_ts:
-            return target_ts < fact_ts
+        # Compare parsed datetimes, not raw strings — ISO-8601 permits mixed
+        # Z/offset forms whose lexicographic order inverts chronology.
+        # Naive and aware datetimes are not comparable; fall back to
+        # snapshot order for that mix, ties, or unparseable values.
+        target_dt = _parse_timestamp(target.get("timestamp"))
+        fact_dt = _parse_timestamp(fact.get("timestamp"))
+        if (
+            target_dt is not None
+            and fact_dt is not None
+            and (target_dt.tzinfo is None) == (fact_dt.tzinfo is None)
+            and target_dt != fact_dt
+        ):
+            return target_dt < fact_dt
         return target_index < index
 
     violations = []
