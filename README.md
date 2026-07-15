@@ -51,6 +51,12 @@ No violations found.
 
 `results/digitizer-production.json` is a public summary of an internal production scan, not a raw memory export. We keep original authorship certainty separate from governance/provenance; unknown authorship stays unknown rather than being rewritten to make a metric look cleaner.
 
+**Note:** these scores were produced under the scorer's previous semantics. Stability is now
+default-deny — permanent facts with unknown authorship fail their check — so with 0.6604
+authorship-known coverage, a stability score of 1.00 is not reproducible under the current
+scorer. The raw export is not public, so the file cannot be re-scored; it stands as a
+historical measurement.
+
 ---
 
 ## What does your stack score?
@@ -76,11 +82,12 @@ Expected output (the sample is intentionally imperfect):
 
 ```
 Governance score:   0.95
-Stability score:    0.50
+Stability score:    0.33
 Provenance coverage: 0.95
 
 Issues found:
   ! [f011] missing agent_id
+  ! [f011] agent '' has no WriteAuthority — permanent write is unverifiable (default deny)
   ! [f007] agent 'agent-summarizer' has no WriteAuthority — unauthorized overwrite
 ```
 
@@ -135,8 +142,14 @@ Your memory export should follow this shape:
 }
 ```
 
-`authorities` is optional. Without it, declared permanent overwrites are treated as unauthorized.
-If a snapshot contains no declared overwrites, stability can only say that no overwrite was visible in that snapshot.
+Authority is **default-deny**: every permanent fact must come from an agent registered in
+`authorities`. If `authorities` is missing or empty, every permanent fact in the snapshot is
+treated as an unverifiable write and fails its stability check — a snapshot with permanent
+facts and no declared authorities cannot score 1.0. Declared permanent overwrites are likewise
+unauthorized without a matching `WriteAuthority`.
+Undeclared overwrites that reuse an existing `fact_id` are flagged as duplicates; an undeclared
+overwrite under a *new* `fact_id` is still invisible to a single-snapshot scorer — stability
+measures what the snapshot can prove, not what it cannot see.
 
 ---
 

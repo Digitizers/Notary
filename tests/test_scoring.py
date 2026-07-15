@@ -89,6 +89,62 @@ class ScoringTests(unittest.TestCase):
         self.assertEqual(score, 0.0)
         self.assertTrue(any("overwrite not permitted" in violation for violation in violations))
 
+    def test_stability_denies_permanent_write_by_unregistered_agent(self):
+        score, violations = stability_score([
+            valid_fact(fact_id="f002", agent_id="agent-rogue"),
+        ], authorities=[{
+            "agent_id": "agent-preferences",
+            "allowed_surfaces": ["user_profile"],
+            "can_overwrite": True,
+        }])
+
+        self.assertEqual(score, 0.0)
+        self.assertTrue(any("unverifiable (default deny)" in violation for violation in violations))
+
+    def test_stability_denies_permanent_facts_when_no_authorities_declared(self):
+        score, violations = stability_score([
+            valid_fact(fact_id="f001"),
+            valid_fact(fact_id="f002", session_id="sess-002"),
+        ], authorities=[])
+
+        self.assertEqual(score, 0.0)
+        self.assertEqual(len(violations), 2)
+
+    def test_stability_allows_registered_non_overwrite_permanent_write(self):
+        score, violations = stability_score([
+            valid_fact(fact_id="f001"),
+        ], authorities=[{
+            "agent_id": "agent-preferences",
+            "allowed_surfaces": ["user_profile"],
+            "can_overwrite": False,
+        }])
+
+        self.assertEqual(score, 1.0)
+        self.assertEqual(violations, [])
+
+    def test_stability_ignores_non_permanent_facts_from_unregistered_agents(self):
+        score, violations = stability_score([
+            valid_fact(fact_id="f001", lifecycle="session", agent_id="agent-rogue"),
+            valid_fact(fact_id="f002", lifecycle="volatile", agent_id="agent-rogue"),
+        ], authorities=[])
+
+        self.assertEqual(score, 1.0)
+        self.assertEqual(violations, [])
+
+    def test_gaming_vector_is_flagged(self):
+        import json
+        from pathlib import Path
+
+        data = json.loads(
+            (Path(__file__).parent / "gaming_vector.json").read_text()
+        )
+        score, violations = stability_score(
+            data.get("facts", []), data.get("authorities", [])
+        )
+
+        self.assertLess(score, 1.0)
+        self.assertGreater(len(violations), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

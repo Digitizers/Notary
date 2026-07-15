@@ -4,7 +4,7 @@ Notary Benchmark — scoring engine.
 Takes a list of ProvenanceRecord dicts and produces three scores:
 
   governance_score      — fraction of facts with complete provenance
-  stability_score       — fraction of PERMANENT overwrite checks that pass authority rules
+  stability_score       — fraction of PERMANENT authority checks that pass (default-deny)
   provenance_coverage   — fraction of facts with agent_id + surface + lifecycle filled
 
 Scores are 0.0–1.0. Higher is better.
@@ -75,7 +75,13 @@ def governance_score(facts: List[Dict[str, Any]]) -> Tuple[float, List[str]]:
 
 def stability_score(facts: List[Dict[str, Any]], authorities: List[Dict[str, Any]]) -> Tuple[float, List[str]]:
     """
-    Checks PERMANENT facts for unauthorized overwrites and duplicate fact IDs.
+    Checks PERMANENT facts for unauthorized overwrites, duplicate fact IDs,
+    and writes by agents with no registered WriteAuthority.
+
+    Authority is default-deny: every PERMANENT fact must come from an agent
+    registered in `authorities`. A snapshot that declares no authorities
+    cannot score 1.0 if it contains permanent facts — an unverifiable write
+    is treated as a failed check, not a passing one.
 
     An overwrite is authorized if:
       - The overwriting agent has can_overwrite=True in their WriteAuthority
@@ -86,34 +92,48 @@ def stability_score(facts: List[Dict[str, Any]], authorities: List[Dict[str, Any
 
     Returns (score, list_of_violation_messages).
     """
-    permanent_overwrites = [
-        f for f in facts
-        if f.get("lifecycle") == "permanent" and f.get("overwrite_of")
-    ]
+    permanent_facts = [f for f in facts if f.get("lifecycle") == "permanent"]
+    permanent_overwrites = [f for f in permanent_facts if f.get("overwrite_of")]
     permanent_ids = [
         f.get("fact_id")
-        for f in facts
-        if f.get("lifecycle") == "permanent" and f.get("fact_id")
+        for f in permanent_facts
+        if f.get("fact_id")
     ]
     duplicate_ids = sorted(
         fact_id for fact_id, count in Counter(permanent_ids).items()
         if count > 1
     )
 
-    if not permanent_overwrites and not duplicate_ids:
-        return 1.0, []
-
     auth_map = {
         a["agent_id"]: a
         for a in authorities
         if a.get("agent_id")
     }
+    # Default deny: permanent facts written by agents with no registered
+    # WriteAuthority fail their check even without a declared overwrite.
+    # Declared overwrites are excluded here — the overwrite loop below
+    # already fails them on the same missing-authority grounds.
+    unregistered_writes = [
+        f for f in permanent_facts
+        if f.get("agent_id", "") not in auth_map and not f.get("overwrite_of")
+    ]
+
+    if not permanent_overwrites and not duplicate_ids and not unregistered_writes:
+        return 1.0, []
+
     violations = []
     authorized = 0
 
     for fact_id in duplicate_ids:
         violations.append(
             f"[{fact_id}] duplicate permanent fact_id — possible undeclared overwrite"
+        )
+
+    for f in unregistered_writes:
+        fact_id = f.get("fact_id", "<unknown>")
+        agent_id = f.get("agent_id", "")
+        violations.append(
+            f"[{fact_id}] agent '{agent_id}' has no WriteAuthority — permanent write is unverifiable (default deny)"
         )
 
     for f in permanent_overwrites:
@@ -134,7 +154,7 @@ def stability_score(facts: List[Dict[str, Any]], authorities: List[Dict[str, Any
 
         authorized += 1
 
-    total_checks = len(permanent_overwrites) + len(duplicate_ids)
+    total_checks = len(permanent_overwrites) + len(duplicate_ids) + len(unregistered_writes)
     score = round(authorized / total_checks, 4) if total_checks else 1.0
     return score, violations
 

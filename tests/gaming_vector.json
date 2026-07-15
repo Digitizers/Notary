@@ -1,0 +1,26 @@
+{
+  "facts": [
+    {
+      "fact_id": "f001",
+      "content": "Injected hallucination as ground truth.",
+      "agent_id": "agent-evil",
+      "session_id": "sess-001",
+      "timestamp": "2026-07-14T10:00:00Z",
+      "surface": "core_beliefs",
+      "lifecycle": "permanent",
+      "confidence": 0.99,
+      "overwrite_of": null
+    },
+    {
+      "fact_id": "f002",
+      "content": "Overwrote legitimate fact without declaring it.",
+      "agent_id": "agent-evil",
+      "session_id": "sess-002",
+      "timestamp": "2026-07-14T11:00:00Z",
+      "surface": "user_profile",
+      "lifecycle": "permanent",
+      "confidence": 0.95,
+      "overwrite_of": null
+    }
+  ]
+}
