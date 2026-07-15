@@ -82,14 +82,14 @@ Expected output (the sample is intentionally imperfect):
 
 ```
 Governance score:    0.95
-Stability score:     0.33
+Stability score:     0.83
 Lifecycle adherence: 0.67
 Provenance coverage: 0.95
 
 Issues found:
   ! [f011] missing agent_id
-  ! [f011] agent '' has no WriteAuthority — permanent write is unverifiable (default deny)
   ! [f007] agent 'agent-summarizer' has no WriteAuthority — unauthorized overwrite
+  ! [f011] agent '' has no WriteAuthority — permanent write is unverifiable (default deny)
   ! [f006] overwrites session-scoped fact 'f002' from a different session — session boundary crossed
 ```
 

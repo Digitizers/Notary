@@ -146,6 +146,22 @@ class ScoringTests(unittest.TestCase):
         self.assertEqual(score, 1.0)
         self.assertEqual(violations, [])
 
+    def test_stability_scores_rogue_write_proportionally(self):
+        authority = {
+            "agent_id": "agent-preferences",
+            "allowed_surfaces": ["user_profile"],
+            "can_overwrite": False,
+        }
+        score, violations = stability_score([
+            valid_fact(fact_id="f001"),
+            valid_fact(fact_id="f002"),
+            valid_fact(fact_id="f003"),
+            valid_fact(fact_id="f004", agent_id="agent-rogue"),
+        ], authorities=[authority])
+
+        self.assertEqual(score, 0.75)
+        self.assertEqual(len(violations), 1)
+
     def test_lifecycle_flags_cross_session_overwrite_of_session_fact(self):
         score, violations = lifecycle_adherence_score([
             valid_fact(fact_id="f001", lifecycle="session", session_id="sess-001"),
@@ -179,6 +195,21 @@ class ScoringTests(unittest.TestCase):
 
         self.assertEqual(score, 1.0)
         self.assertEqual(violations, [])
+
+    def test_lifecycle_checks_overwrite_that_reuses_the_same_fact_id(self):
+        score, violations = lifecycle_adherence_score([
+            valid_fact(fact_id="f001", lifecycle="session", session_id="sess-001"),
+            valid_fact(
+                fact_id="f001",
+                lifecycle="permanent",
+                session_id="sess-002",
+                overwrite_of="f001",
+            ),
+        ])
+
+        self.assertEqual(score, 0.0)
+        self.assertTrue(any("session boundary crossed" in violation for violation in violations))
+        self.assertTrue(any("lifecycle escalation" in violation for violation in violations))
 
     def test_lifecycle_ignores_overwrites_of_facts_outside_the_snapshot(self):
         score, violations = lifecycle_adherence_score([

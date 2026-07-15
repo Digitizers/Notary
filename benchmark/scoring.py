@@ -85,7 +85,9 @@ def stability_score(facts: List[Dict[str, Any]], authorities: List[Dict[str, Any
     contains permanent facts — an unverifiable write is treated as a failed
     check, not a passing one.
 
-    An overwrite is authorized if:
+    Every permanent fact counts as one check, passing or failing, so the
+    score reflects the proportion of authorized writes. An overwrite is
+    authorized if:
       - The overwriting agent has can_overwrite=True in their WriteAuthority
       - AND the surface is in their allowed_surfaces
 
@@ -95,7 +97,6 @@ def stability_score(facts: List[Dict[str, Any]], authorities: List[Dict[str, Any
     Returns (score, list_of_violation_messages).
     """
     permanent_facts = [f for f in facts if f.get("lifecycle") == "permanent"]
-    permanent_overwrites = [f for f in permanent_facts if f.get("overwrite_of")]
     permanent_ids = [
         f.get("fact_id")
         for f in permanent_facts
@@ -111,58 +112,53 @@ def stability_score(facts: List[Dict[str, Any]], authorities: List[Dict[str, Any
         for a in authorities
         if a.get("agent_id")
     }
-    # Default deny: a permanent fact that is not a declared overwrite still
-    # needs a registered WriteAuthority covering its surface. Declared
-    # overwrites are excluded here — the overwrite loop below already fails
-    # them on the same grounds.
-    unauthorized_writes = []
-    for f in permanent_facts:
-        if f.get("overwrite_of"):
-            continue
-        fact_id = f.get("fact_id", "<unknown>")
-        agent_id = f.get("agent_id", "")
-        auth = auth_map.get(agent_id)
-        if auth is None:
-            unauthorized_writes.append(
-                f"[{fact_id}] agent '{agent_id}' has no WriteAuthority — permanent write is unverifiable (default deny)"
-            )
-        elif f.get("surface", "") not in auth.get("allowed_surfaces", []):
-            unauthorized_writes.append(
-                f"[{fact_id}] agent '{agent_id}' not authorized for surface '{f.get('surface', '')}' — permanent write denied (default deny)"
-            )
-
-    if not permanent_overwrites and not duplicate_ids and not unauthorized_writes:
-        return 1.0, []
 
     violations = []
     authorized = 0
+    total_checks = 0
 
     for fact_id in duplicate_ids:
+        total_checks += 1
         violations.append(
             f"[{fact_id}] duplicate permanent fact_id — possible undeclared overwrite"
         )
 
-    violations.extend(unauthorized_writes)
-
-    for f in permanent_overwrites:
+    # Every permanent fact is one authority check: default-deny for plain
+    # writes (registered agent + allowed surface), plus overwrite permission
+    # when the fact declares overwrite_of. Passing facts count toward the
+    # score so a single rogue write among many authorized ones is scored
+    # proportionally rather than zeroing the snapshot.
+    for f in permanent_facts:
+        fact_id = f.get("fact_id", "<unknown>")
         agent_id = f.get("agent_id", "")
         surface = f.get("surface", "")
-        fact_id = f.get("fact_id", "<unknown>")
-
         auth = auth_map.get(agent_id)
-        if not auth:
-            violations.append(f"[{fact_id}] agent '{agent_id}' has no WriteAuthority — unauthorized overwrite")
-            continue
-        if not auth.get("can_overwrite"):
-            violations.append(f"[{fact_id}] agent '{agent_id}' overwrite not permitted")
-            continue
-        if surface not in auth.get("allowed_surfaces", []):
-            violations.append(f"[{fact_id}] agent '{agent_id}' not authorized for surface '{surface}'")
-            continue
+        total_checks += 1
+
+        if f.get("overwrite_of"):
+            if not auth:
+                violations.append(f"[{fact_id}] agent '{agent_id}' has no WriteAuthority — unauthorized overwrite")
+                continue
+            if not auth.get("can_overwrite"):
+                violations.append(f"[{fact_id}] agent '{agent_id}' overwrite not permitted")
+                continue
+            if surface not in auth.get("allowed_surfaces", []):
+                violations.append(f"[{fact_id}] agent '{agent_id}' not authorized for surface '{surface}'")
+                continue
+        else:
+            if auth is None:
+                violations.append(
+                    f"[{fact_id}] agent '{agent_id}' has no WriteAuthority — permanent write is unverifiable (default deny)"
+                )
+                continue
+            if surface not in auth.get("allowed_surfaces", []):
+                violations.append(
+                    f"[{fact_id}] agent '{agent_id}' not authorized for surface '{surface}' — permanent write denied (default deny)"
+                )
+                continue
 
         authorized += 1
 
-    total_checks = len(permanent_overwrites) + len(duplicate_ids) + len(unauthorized_writes)
     score = round(authorized / total_checks, 4) if total_checks else 1.0
     return score, violations
 
@@ -183,38 +179,47 @@ def lifecycle_adherence_score(facts: List[Dict[str, Any]]) -> Tuple[float, List[
 
     Returns (score, list_of_violation_messages).
     """
-    by_id = {f.get("fact_id"): f for f in facts if f.get("fact_id")}
+    # A fact_id can appear more than once (an overwrite may reuse the id it
+    # replaces), so keep every record per id and never resolve an overwrite
+    # to the overwriting record itself — otherwise a permanent fact with
+    # overwrite_of pointing at its own reused id would bypass both checks.
+    by_id: Dict[str, List[Dict[str, Any]]] = {}
+    for f in facts:
+        fact_id = f.get("fact_id")
+        if fact_id:
+            by_id.setdefault(fact_id, []).append(f)
 
     violations = []
     passed = 0
     total_checks = 0
 
     for f in facts:
-        target = by_id.get(f.get("overwrite_of"))
-        if target is None:
+        targets = [t for t in by_id.get(f.get("overwrite_of"), []) if t is not f]
+        if not targets:
             continue
 
         fact_id = f.get("fact_id", "<unknown>")
         issues = []
 
-        if (
-            target.get("lifecycle") == "session"
-            and f.get("session_id") != target.get("session_id")
-        ):
-            issues.append(
-                f"[{fact_id}] overwrites session-scoped fact"
-                f" '{target.get('fact_id')}' from a different session —"
-                " session boundary crossed"
-            )
-        if (
-            f.get("lifecycle") == "permanent"
-            and target.get("lifecycle") in ("session", "volatile")
-        ):
-            issues.append(
-                f"[{fact_id}] permanent overwrite of"
-                f" {target.get('lifecycle')} fact '{target.get('fact_id')}' —"
-                " lifecycle escalation"
-            )
+        for target in targets:
+            if (
+                target.get("lifecycle") == "session"
+                and f.get("session_id") != target.get("session_id")
+            ):
+                issues.append(
+                    f"[{fact_id}] overwrites session-scoped fact"
+                    f" '{target.get('fact_id')}' from a different session —"
+                    " session boundary crossed"
+                )
+            if (
+                f.get("lifecycle") == "permanent"
+                and target.get("lifecycle") in ("session", "volatile")
+            ):
+                issues.append(
+                    f"[{fact_id}] permanent overwrite of"
+                    f" {target.get('lifecycle')} fact '{target.get('fact_id')}' —"
+                    " lifecycle escalation"
+                )
 
         total_checks += 1
         if issues:
