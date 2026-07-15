@@ -4,7 +4,7 @@ Notary Benchmark — scoring engine.
 Takes a list of ProvenanceRecord dicts and produces three scores:
 
   governance_score      — fraction of facts with complete provenance
-  stability_score       — fraction of PERMANENT facts never overwritten without authority
+  stability_score       — fraction of PERMANENT overwrite checks that pass authority rules
   provenance_coverage   — fraction of facts with agent_id + surface + lifecycle filled
 
 Scores are 0.0–1.0. Higher is better.
@@ -12,7 +12,16 @@ Scores are 0.0–1.0. Higher is better.
 
 from __future__ import annotations
 
+from collections import Counter
 from typing import Any, Dict, List, Tuple
+
+
+def _confidence_in_range(value: Any) -> bool:
+    try:
+        confidence = float(value)
+    except (TypeError, ValueError):
+        return False
+    return 0.0 <= confidence <= 1.0
 
 
 def governance_score(facts: List[Dict[str, Any]]) -> Tuple[float, List[str]]:
@@ -52,7 +61,7 @@ def governance_score(facts: List[Dict[str, Any]]) -> Tuple[float, List[str]]:
             issues.append(f"[{fact_id}] invalid lifecycle '{lc}' (expected: permanent/session/volatile)")
 
         conf = f.get("confidence")
-        if conf is None or not (0.0 <= float(conf) <= 1.0):
+        if conf is None or not _confidence_in_range(conf):
             issues.append(f"[{fact_id}] confidence out of range: {conf}")
 
         if issues:
@@ -66,23 +75,48 @@ def governance_score(facts: List[Dict[str, Any]]) -> Tuple[float, List[str]]:
 
 def stability_score(facts: List[Dict[str, Any]], authorities: List[Dict[str, Any]]) -> Tuple[float, List[str]]:
     """
-    Checks PERMANENT facts for unauthorized overwrites.
+    Checks PERMANENT facts for unauthorized overwrites and duplicate fact IDs.
 
     An overwrite is authorized if:
       - The overwriting agent has can_overwrite=True in their WriteAuthority
       - AND the surface is in their allowed_surfaces
 
+    Duplicate permanent fact IDs are flagged as possible undeclared overwrites,
+    because a single snapshot cannot otherwise prove the write history.
+
     Returns (score, list_of_violation_messages).
     """
-    permanent = [f for f in facts if f.get("lifecycle") == "permanent" and f.get("overwrite_of")]
-    if not permanent:
+    permanent_overwrites = [
+        f for f in facts
+        if f.get("lifecycle") == "permanent" and f.get("overwrite_of")
+    ]
+    permanent_ids = [
+        f.get("fact_id")
+        for f in facts
+        if f.get("lifecycle") == "permanent" and f.get("fact_id")
+    ]
+    duplicate_ids = sorted(
+        fact_id for fact_id, count in Counter(permanent_ids).items()
+        if count > 1
+    )
+
+    if not permanent_overwrites and not duplicate_ids:
         return 1.0, []
 
-    auth_map = {a["agent_id"]: a for a in authorities}
+    auth_map = {
+        a["agent_id"]: a
+        for a in authorities
+        if a.get("agent_id")
+    }
     violations = []
     authorized = 0
 
-    for f in permanent:
+    for fact_id in duplicate_ids:
+        violations.append(
+            f"[{fact_id}] duplicate permanent fact_id — possible undeclared overwrite"
+        )
+
+    for f in permanent_overwrites:
         agent_id = f.get("agent_id", "")
         surface = f.get("surface", "")
         fact_id = f.get("fact_id", "<unknown>")
@@ -100,7 +134,8 @@ def stability_score(facts: List[Dict[str, Any]], authorities: List[Dict[str, Any
 
         authorized += 1
 
-    score = round(authorized / len(permanent), 4) if permanent else 1.0
+    total_checks = len(permanent_overwrites) + len(duplicate_ids)
+    score = round(authorized / total_checks, 4) if total_checks else 1.0
     return score, violations
 
 
