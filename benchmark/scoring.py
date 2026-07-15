@@ -183,18 +183,32 @@ def lifecycle_adherence_score(facts: List[Dict[str, Any]]) -> Tuple[float, List[
     # replaces), so keep every record per id and never resolve an overwrite
     # to the overwriting record itself — otherwise a permanent fact with
     # overwrite_of pointing at its own reused id would bypass both checks.
-    by_id: Dict[str, List[Dict[str, Any]]] = {}
-    for f in facts:
+    # An overwrite is only checked against records written BEFORE it
+    # (by timestamp, falling back to snapshot order when timestamps tie or
+    # are missing) — a record cannot have overwritten something that did
+    # not exist yet.
+    by_id: Dict[str, List[Tuple[int, Dict[str, Any]]]] = {}
+    for index, f in enumerate(facts):
         fact_id = f.get("fact_id")
         if fact_id:
-            by_id.setdefault(fact_id, []).append(f)
+            by_id.setdefault(fact_id, []).append((index, f))
+
+    def _is_prior(target_index: int, target: Dict[str, Any], index: int, fact: Dict[str, Any]) -> bool:
+        target_ts = target.get("timestamp") or ""
+        fact_ts = fact.get("timestamp") or ""
+        if target_ts and fact_ts and target_ts != fact_ts:
+            return target_ts < fact_ts
+        return target_index < index
 
     violations = []
     passed = 0
     total_checks = 0
 
-    for f in facts:
-        targets = [t for t in by_id.get(f.get("overwrite_of"), []) if t is not f]
+    for index, f in enumerate(facts):
+        targets = [
+            t for t_index, t in by_id.get(f.get("overwrite_of"), [])
+            if t is not f and _is_prior(t_index, t, index, f)
+        ]
         if not targets:
             continue
 

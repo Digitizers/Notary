@@ -211,6 +211,37 @@ class ScoringTests(unittest.TestCase):
         self.assertTrue(any("session boundary crossed" in violation for violation in violations))
         self.assertTrue(any("lifecycle escalation" in violation for violation in violations))
 
+    def test_lifecycle_does_not_check_overwrites_against_later_records(self):
+        score, violations = lifecycle_adherence_score([
+            valid_fact(
+                fact_id="f001",
+                lifecycle="session",
+                session_id="sess-001",
+                timestamp="2026-05-01T09:00:00Z",
+            ),
+            valid_fact(
+                fact_id="f001",
+                lifecycle="session",
+                session_id="sess-001",
+                overwrite_of="f001",
+                timestamp="2026-05-01T10:00:00Z",
+            ),
+            valid_fact(
+                fact_id="f001",
+                lifecycle="session",
+                session_id="sess-002",
+                overwrite_of="f001",
+                timestamp="2026-05-01T11:00:00Z",
+            ),
+        ])
+
+        # The same-session update must not be penalized for the later
+        # cross-session record; only the cross-session update fails, and it
+        # is checked against both prior records.
+        self.assertEqual(score, 0.5)
+        self.assertEqual(len(violations), 2)
+        self.assertTrue(all("session boundary crossed" in v for v in violations))
+
     def test_lifecycle_ignores_overwrites_of_facts_outside_the_snapshot(self):
         score, violations = lifecycle_adherence_score([
             valid_fact(fact_id="f002", overwrite_of="f-not-here"),
