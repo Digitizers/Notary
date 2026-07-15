@@ -321,6 +321,38 @@ class ScoringTests(unittest.TestCase):
         self.assertEqual(score, 0.0)
         self.assertTrue(any("undeclared cross-agent collision" in v for v in violations))
 
+    def test_conflict_requires_authority_over_the_displaced_surface(self):
+        score, violations = cross_agent_conflict_score([
+            valid_fact(fact_id="f001", agent_id="agent-a", surface="user_profile"),
+            valid_fact(fact_id="f002", agent_id="agent-b", surface="search_cache",
+                       overwrite_of="f001", timestamp="2026-05-01T10:00:00Z"),
+        ], authorities=[{
+            "agent_id": "agent-b",
+            "allowed_surfaces": ["search_cache"],
+            "can_overwrite": True,
+        }])
+
+        self.assertEqual(score, 0.0)
+        self.assertTrue(any("unresolved cross-agent conflict" in v for v in violations))
+
+    def test_conflict_flags_unresolved_same_id_declaration_as_collision(self):
+        # The second record declares overwrite_of == its own fact_id but is
+        # EARLIER than the other record, so it resolves to nothing — the
+        # collision must still be reported.
+        score, violations = cross_agent_conflict_score([
+            valid_fact(fact_id="f001", agent_id="agent-a",
+                       timestamp="2026-05-01T10:00:00Z"),
+            valid_fact(fact_id="f001", agent_id="agent-b", overwrite_of="f001",
+                       session_id="sess-002", timestamp="2026-05-01T09:00:00Z"),
+        ], authorities=[{
+            "agent_id": "agent-b",
+            "allowed_surfaces": ["user_profile"],
+            "can_overwrite": True,
+        }])
+
+        self.assertEqual(score, 0.0)
+        self.assertTrue(any("undeclared cross-agent collision" in v for v in violations))
+
     def test_conflict_does_not_flag_declared_same_id_overwrite_as_collision(self):
         score, violations = cross_agent_conflict_score([
             valid_fact(fact_id="f001", agent_id="agent-a"),

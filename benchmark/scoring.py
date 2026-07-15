@@ -305,7 +305,10 @@ def cross_agent_conflict_score(
     passed = 0
     total_checks = 0
 
-    for f, targets in _resolve_overwrite_targets(facts):
+    resolved = _resolve_overwrite_targets(facts)
+    resolved_fact_ids = {id(f) for f, _ in resolved}
+
+    for f, targets in resolved:
         agent_id = f.get("agent_id", "")
         if not agent_id:
             continue
@@ -320,11 +323,19 @@ def cross_agent_conflict_score(
         surface = f.get("surface", "")
         total_checks += 1
 
+        # Authority must cover the surface of the fact being DISPLACED,
+        # not the surface the replacement claims for itself — otherwise
+        # relabeling the new record to an allowed surface launders an
+        # overwrite of memory the agent has no authority over.
         auth = auth_map.get(agent_id)
         if (
             auth
             and auth.get("can_overwrite")
             and surface in auth.get("allowed_surfaces", [])
+            and all(
+                t.get("surface") in auth.get("allowed_surfaces", [])
+                for t in cross_targets
+            )
         ):
             passed += 1
             continue
@@ -338,9 +349,12 @@ def cross_agent_conflict_score(
     by_id_agents: Dict[str, set] = {}
     for f in facts:
         if f.get("lifecycle") == "permanent" and f.get("fact_id") and f.get("agent_id"):
-            if f.get("overwrite_of") == f.get("fact_id"):
-                # A declared in-place replacement is not an undeclared
-                # collision — the overwrite path above already scored it.
+            if f.get("overwrite_of") == f.get("fact_id") and id(f) in resolved_fact_ids:
+                # A declared in-place replacement that actually resolved to
+                # a prior record is not an undeclared collision — the
+                # overwrite path above already scored it. A same-id
+                # declaration that resolved to nothing (earlier timestamp,
+                # absent target) is still a collision.
                 continue
             by_id_agents.setdefault(f["fact_id"], set()).add(f["agent_id"])
     for fact_id in sorted(by_id_agents):
