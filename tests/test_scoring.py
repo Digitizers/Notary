@@ -110,6 +110,21 @@ class ScoringTests(unittest.TestCase):
         self.assertEqual(score, 0.0)
         self.assertEqual(len(violations), 2)
 
+    def test_stability_denies_permanent_write_on_disallowed_surface(self):
+        score, violations = stability_score([
+            valid_fact(fact_id="f002", surface="task_state"),
+        ], authorities=[{
+            "agent_id": "agent-preferences",
+            "allowed_surfaces": ["user_profile"],
+            "can_overwrite": True,
+        }])
+
+        self.assertEqual(score, 0.0)
+        self.assertTrue(any(
+            "not authorized for surface 'task_state' — permanent write denied (default deny)" in violation
+            for violation in violations
+        ))
+
     def test_stability_allows_registered_non_overwrite_permanent_write(self):
         score, violations = stability_score([
             valid_fact(fact_id="f001"),

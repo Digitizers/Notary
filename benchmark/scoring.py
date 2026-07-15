@@ -77,12 +77,13 @@ def governance_score(facts: List[Dict[str, Any]]) -> Tuple[float, List[str]]:
 def stability_score(facts: List[Dict[str, Any]], authorities: List[Dict[str, Any]]) -> Tuple[float, List[str]]:
     """
     Checks PERMANENT facts for unauthorized overwrites, duplicate fact IDs,
-    and writes by agents with no registered WriteAuthority.
+    and writes without a covering WriteAuthority.
 
     Authority is default-deny: every PERMANENT fact must come from an agent
-    registered in `authorities`. A snapshot that declares no authorities
-    cannot score 1.0 if it contains permanent facts — an unverifiable write
-    is treated as a failed check, not a passing one.
+    registered in `authorities` whose allowed_surfaces covers the fact's
+    surface. A snapshot that declares no authorities cannot score 1.0 if it
+    contains permanent facts — an unverifiable write is treated as a failed
+    check, not a passing one.
 
     An overwrite is authorized if:
       - The overwriting agent has can_overwrite=True in their WriteAuthority
@@ -110,16 +111,27 @@ def stability_score(facts: List[Dict[str, Any]], authorities: List[Dict[str, Any
         for a in authorities
         if a.get("agent_id")
     }
-    # Default deny: permanent facts written by agents with no registered
-    # WriteAuthority fail their check even without a declared overwrite.
-    # Declared overwrites are excluded here — the overwrite loop below
-    # already fails them on the same missing-authority grounds.
-    unregistered_writes = [
-        f for f in permanent_facts
-        if f.get("agent_id", "") not in auth_map and not f.get("overwrite_of")
-    ]
+    # Default deny: a permanent fact that is not a declared overwrite still
+    # needs a registered WriteAuthority covering its surface. Declared
+    # overwrites are excluded here — the overwrite loop below already fails
+    # them on the same grounds.
+    unauthorized_writes = []
+    for f in permanent_facts:
+        if f.get("overwrite_of"):
+            continue
+        fact_id = f.get("fact_id", "<unknown>")
+        agent_id = f.get("agent_id", "")
+        auth = auth_map.get(agent_id)
+        if auth is None:
+            unauthorized_writes.append(
+                f"[{fact_id}] agent '{agent_id}' has no WriteAuthority — permanent write is unverifiable (default deny)"
+            )
+        elif f.get("surface", "") not in auth.get("allowed_surfaces", []):
+            unauthorized_writes.append(
+                f"[{fact_id}] agent '{agent_id}' not authorized for surface '{f.get('surface', '')}' — permanent write denied (default deny)"
+            )
 
-    if not permanent_overwrites and not duplicate_ids and not unregistered_writes:
+    if not permanent_overwrites and not duplicate_ids and not unauthorized_writes:
         return 1.0, []
 
     violations = []
@@ -130,12 +142,7 @@ def stability_score(facts: List[Dict[str, Any]], authorities: List[Dict[str, Any
             f"[{fact_id}] duplicate permanent fact_id — possible undeclared overwrite"
         )
 
-    for f in unregistered_writes:
-        fact_id = f.get("fact_id", "<unknown>")
-        agent_id = f.get("agent_id", "")
-        violations.append(
-            f"[{fact_id}] agent '{agent_id}' has no WriteAuthority — permanent write is unverifiable (default deny)"
-        )
+    violations.extend(unauthorized_writes)
 
     for f in permanent_overwrites:
         agent_id = f.get("agent_id", "")
@@ -155,7 +162,7 @@ def stability_score(facts: List[Dict[str, Any]], authorities: List[Dict[str, Any
 
         authorized += 1
 
-    total_checks = len(permanent_overwrites) + len(duplicate_ids) + len(unregistered_writes)
+    total_checks = len(permanent_overwrites) + len(duplicate_ids) + len(unauthorized_writes)
     score = round(authorized / total_checks, 4) if total_checks else 1.0
     return score, violations
 
