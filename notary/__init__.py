@@ -1,3 +1,15 @@
-from notary.spec import FactLifecycle, ProvenanceRecord, WriteAuthority, NotaryProtocol
+from notary.spec import (
+    ConflictRecord,
+    FactLifecycle,
+    NotaryProtocol,
+    ProvenanceRecord,
+    WriteAuthority,
+)
 
-__all__ = ["FactLifecycle", "ProvenanceRecord", "WriteAuthority", "NotaryProtocol"]
+__all__ = [
+    "ConflictRecord",
+    "FactLifecycle",
+    "NotaryProtocol",
+    "ProvenanceRecord",
+    "WriteAuthority",
+]

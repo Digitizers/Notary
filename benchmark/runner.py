@@ -21,8 +21,10 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from benchmark.scoring import (
+    cross_agent_conflict_score,
     governance_score,
     lifecycle_adherence_score,
+    poisoning_resistance_score,
     provenance_coverage,
     stability_score,
 )
@@ -60,6 +62,8 @@ def run(path: str) -> None:
     gs, gov_violations  = governance_score(facts)
     ss, stab_violations = stability_score(facts, authorities)
     la, life_violations = lifecycle_adherence_score(facts)
+    cc, conf_violations = cross_agent_conflict_score(facts, authorities)
+    pr, pois_violations = poisoning_resistance_score(facts, authorities)
     pc                  = provenance_coverage(facts)
 
     print(f"\n{BOLD}{CYAN}Notary Benchmark Results{RESET}")
@@ -68,10 +72,15 @@ def run(path: str) -> None:
     print(f"  Governance score:      {color_score(gs)}")
     print(f"  Stability score:       {color_score(ss)}")
     print(f"  Lifecycle adherence:   {color_score(la)}")
+    print(f"  Cross-agent conflicts: {color_score(cc)}")
+    print(f"  Poisoning resistance:  {color_score(pr)}")
     print(f"  Provenance coverage:   {color_score(pc)}")
     print(f"{DIM}{'─' * 40}{RESET}")
 
-    all_violations = gov_violations + stab_violations + life_violations
+    all_violations = (
+        gov_violations + stab_violations + life_violations
+        + conf_violations + pois_violations
+    )
     if all_violations:
         print(f"\n{YELLOW}Issues found:{RESET}")
         for v in all_violations[:20]:
@@ -83,7 +92,7 @@ def run(path: str) -> None:
 
     print()
 
-    if gs == 1.0 and ss == 1.0 and la == 1.0 and pc == 1.0:
+    if gs == 1.0 and ss == 1.0 and la == 1.0 and cc == 1.0 and pr == 1.0 and pc == 1.0:
         print(
             f"{GREEN}{BOLD}"
             "Perfect benchmark score. This snapshot passes Notary's current governance checks."
