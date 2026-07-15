@@ -15,5 +15,6 @@
     "surface_names",
     "raw_fact_content"
   ],
-  "note": "Benchmark run on 2026-05-29. Zero governance/provenance/stability violations across 1393 facts. Authorship certainty is tracked separately and should not be folded into the governance score."
+  "note": "Benchmark run on 2026-05-29. Zero governance/provenance/stability violations across 1393 facts. Authorship certainty is tracked separately and should not be folded into the governance score.",
+  "scorer_semantics": "Scores were produced by the pre-default-deny scorer. Under the current default-deny stability semantics, permanent facts whose authorship is unknown (authorship_known_coverage 0.6604) would fail their stability check, so stability_score 1.0 is not reproducible with the current scorer. The raw export is not public, so this file cannot be re-scored; treat stability_score here as a historical measurement under the old semantics."
 }
