@@ -1,6 +1,12 @@
 import unittest
 
-from benchmark.scoring import governance_score, lifecycle_adherence_score, stability_score
+from benchmark.scoring import (
+    cross_agent_conflict_score,
+    governance_score,
+    lifecycle_adherence_score,
+    poisoning_resistance_score,
+    stability_score,
+)
 
 
 def valid_fact(**overrides):
@@ -268,6 +274,94 @@ class ScoringTests(unittest.TestCase):
         score, violations = lifecycle_adherence_score([
             valid_fact(fact_id="f002", overwrite_of="f-not-here"),
         ])
+
+        self.assertEqual(score, 1.0)
+        self.assertEqual(violations, [])
+
+    def test_conflict_flags_unauthorized_cross_agent_overwrite(self):
+        score, violations = cross_agent_conflict_score([
+            valid_fact(fact_id="f001", agent_id="agent-a"),
+            valid_fact(fact_id="f002", agent_id="agent-b", overwrite_of="f001",
+                       timestamp="2026-05-01T10:00:00Z"),
+        ], authorities=[])
+
+        self.assertEqual(score, 0.0)
+        self.assertTrue(any("unresolved cross-agent conflict" in v for v in violations))
+
+    def test_conflict_allows_authorized_cross_agent_overwrite(self):
+        score, violations = cross_agent_conflict_score([
+            valid_fact(fact_id="f001", agent_id="agent-a"),
+            valid_fact(fact_id="f002", agent_id="agent-b", overwrite_of="f001",
+                       timestamp="2026-05-01T10:00:00Z"),
+        ], authorities=[{
+            "agent_id": "agent-b",
+            "allowed_surfaces": ["user_profile"],
+            "can_overwrite": True,
+        }])
+
+        self.assertEqual(score, 1.0)
+        self.assertEqual(violations, [])
+
+    def test_conflict_ignores_same_agent_overwrites(self):
+        score, violations = cross_agent_conflict_score([
+            valid_fact(fact_id="f001"),
+            valid_fact(fact_id="f002", overwrite_of="f001",
+                       timestamp="2026-05-01T10:00:00Z"),
+        ], authorities=[])
+
+        self.assertEqual(score, 1.0)
+        self.assertEqual(violations, [])
+
+    def test_conflict_flags_multi_agent_fact_id_collision(self):
+        score, violations = cross_agent_conflict_score([
+            valid_fact(fact_id="f001", agent_id="agent-a"),
+            valid_fact(fact_id="f001", agent_id="agent-b", session_id="sess-002"),
+        ], authorities=[])
+
+        self.assertEqual(score, 0.0)
+        self.assertTrue(any("undeclared cross-agent collision" in v for v in violations))
+
+    def test_poisoning_flags_confidence_above_ceiling(self):
+        score, violations = poisoning_resistance_score([
+            valid_fact(fact_id="f001", confidence=0.99),
+        ], authorities=[{
+            "agent_id": "agent-preferences",
+            "allowed_surfaces": ["user_profile"],
+            "can_overwrite": False,
+            "max_confidence_claim": 0.8,
+        }])
+
+        self.assertEqual(score, 0.0)
+        self.assertTrue(any("confidence inflation" in v for v in violations))
+
+    def test_poisoning_flags_cross_agent_confidence_dilution(self):
+        score, violations = poisoning_resistance_score([
+            valid_fact(fact_id="f001", agent_id="agent-a", confidence=0.95),
+            valid_fact(fact_id="f002", agent_id="agent-b", confidence=0.4,
+                       overwrite_of="f001", timestamp="2026-05-01T10:00:00Z"),
+        ], authorities=[])
+
+        self.assertEqual(score, 0.0)
+        self.assertTrue(any("cross-agent confidence dilution" in v for v in violations))
+
+    def test_poisoning_allows_same_agent_confidence_correction(self):
+        score, violations = poisoning_resistance_score([
+            valid_fact(fact_id="f001", confidence=0.95),
+            valid_fact(fact_id="f002", confidence=0.4, overwrite_of="f001",
+                       timestamp="2026-05-01T10:00:00Z"),
+        ], authorities=[])
+
+        self.assertEqual(score, 1.0)
+        self.assertEqual(violations, [])
+
+    def test_poisoning_skips_agents_without_declared_ceiling(self):
+        score, violations = poisoning_resistance_score([
+            valid_fact(fact_id="f001", confidence=1.0),
+        ], authorities=[{
+            "agent_id": "agent-preferences",
+            "allowed_surfaces": ["user_profile"],
+            "can_overwrite": False,
+        }])
 
         self.assertEqual(score, 1.0)
         self.assertEqual(violations, [])

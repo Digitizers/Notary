@@ -81,16 +81,20 @@ python3 -m benchmark.runner examples/sample_memory.json
 Expected output (the sample is intentionally imperfect):
 
 ```
-Governance score:    0.95
-Stability score:     0.83
-Lifecycle adherence: 0.67
-Provenance coverage: 0.95
+Governance score:      0.95
+Stability score:       0.83
+Lifecycle adherence:   0.67
+Cross-agent conflicts: 0.00
+Poisoning resistance:  0.95
+Provenance coverage:   0.95
 
 Issues found:
   ! [f011] missing agent_id
   ! [f007] agent 'agent-summarizer' has no WriteAuthority — unauthorized overwrite
   ! [f011] agent '' has no WriteAuthority — permanent write is unverifiable (default deny)
   ! [f006] overwrites session-scoped fact 'f002' from a different session — session boundary crossed
+  ! [f007] agent 'agent-summarizer' overwrote fact 'f001' by agent 'agent-preferences' without authority — unresolved cross-agent conflict
+  ! [f007] agent 'agent-summarizer' overwrote fact 'f001' by agent 'agent-preferences' lowering confidence 0.95 -> 0.7 — cross-agent confidence dilution
 ```
 
 ---
@@ -156,6 +160,15 @@ unauthorized without a matching `WriteAuthority`.
 Undeclared overwrites that reuse an existing `fact_id` are flagged as duplicates; an undeclared
 overwrite under a *new* `fact_id` is still invisible to a single-snapshot scorer — stability
 measures what the snapshot can prove, not what it cannot see.
+
+**Cross-agent conflicts** measures whether the conflicts a snapshot *can* prove were handled
+with authority: a declared overwrite of a different agent's fact passes only if the overwriting
+agent holds `can_overwrite` and the surface; a permanent `fact_id` written by more than one
+agent is an undeclared collision and always fails. **Poisoning resistance** checks the
+mechanical levers a poisoning attack pulls: self-reported confidence above the agent's
+`max_confidence_claim` ceiling (confidence inflation), and cross-agent overwrites that lower
+the target's confidence (dilution). Neither score guesses at semantic truth — a snapshot
+cannot prove content is false, only that its write mechanics were abused.
 
 ---
 

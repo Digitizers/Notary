@@ -51,6 +51,29 @@ class WriteAuthority:
     max_confidence_claim: float = 1.0      # agent cannot self-report above this
 
 
+@dataclass
+class ConflictRecord:
+    """A detected cross-agent memory conflict.
+
+    Emitted whenever one agent's write collides with another agent's
+    fact: a declared overwrite of a different agent's record, an
+    undeclared fact_id collision between agents, or a confidence
+    manipulation (inflation above the writer's ceiling, or a
+    cross-agent overwrite that dilutes confidence). Detection is a
+    first-class output — a governed memory system must be able to say
+    WHERE agents disagreed, not only refuse the losing write.
+    """
+
+    conflict_id: str
+    kind: str                               # "cross_agent_overwrite" | "duplicate_fact_id"
+                                            # | "confidence_inflation" | "confidence_dilution"
+    surface: str
+    fact_ids: List[str]                     # the colliding fact ids, oldest first
+    agent_ids: List[str]                    # the agents involved, same order
+    detected_at: str                        # ISO-8601
+    resolved_by: str | None = None          # fact_id or decision that settled it, if any
+
+
 @runtime_checkable
 class NotaryProtocol(Protocol):
     """
