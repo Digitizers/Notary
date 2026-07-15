@@ -135,7 +135,8 @@ Your memory export should follow this shape:
 }
 ```
 
-`authorities` is optional. Without it, stability scoring assumes all agents have full write authority.
+`authorities` is optional. Without it, declared permanent overwrites are treated as unauthorized.
+If a snapshot contains no declared overwrites, stability can only say that no overwrite was visible in that snapshot.
 
 ---
 

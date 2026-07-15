@@ -77,7 +77,11 @@ def run(path: str) -> None:
     print()
 
     if gs == 1.0 and ss == 1.0 and pc == 1.0:
-        print(f"{GREEN}{BOLD}Perfect score. Your memory stack is fully governed.{RESET}\n")
+        print(
+            f"{GREEN}{BOLD}"
+            "Perfect benchmark score. This snapshot passes Notary's current governance checks."
+            f"{RESET}\n"
+        )
     elif gs < 0.5 or ss < 0.5:
         print(f"{RED}Significant governance gaps detected. See CONTACT.md if you want help.{RESET}\n")
     else:
