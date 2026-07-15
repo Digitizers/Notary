@@ -81,14 +81,16 @@ python3 -m benchmark.runner examples/sample_memory.json
 Expected output (the sample is intentionally imperfect):
 
 ```
-Governance score:   0.95
-Stability score:    0.33
+Governance score:    0.95
+Stability score:     0.33
+Lifecycle adherence: 0.67
 Provenance coverage: 0.95
 
 Issues found:
   ! [f011] missing agent_id
   ! [f011] agent '' has no WriteAuthority — permanent write is unverifiable (default deny)
   ! [f007] agent 'agent-summarizer' has no WriteAuthority — unauthorized overwrite
+  ! [f006] overwrites session-scoped fact 'f002' from a different session — session boundary crossed
 ```
 
 ---
@@ -141,6 +143,10 @@ Your memory export should follow this shape:
   ]
 }
 ```
+
+Facts may optionally carry a `write_signature` — a cryptographic attestation (e.g. an HMAC or
+signature over `fact_id` + `content` + `agent_id` + `timestamp`) that lets authorship be
+verified rather than self-reported. The benchmark does not yet score it.
 
 Authority is **default-deny**: every permanent fact must come from an agent registered in
 `authorities`. If `authorities` is missing or empty, every permanent fact in the snapshot is

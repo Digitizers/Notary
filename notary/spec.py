@@ -35,6 +35,10 @@ class ProvenanceRecord:
     confidence: float = 1.0                 # 0.0–1.0, agent self-reported
     overwrite_of: str | None = None         # fact_id of the record this replaces
     tags: List[str] = field(default_factory=list)
+    write_signature: str | None = None      # optional cryptographic attestation of the write
+                                            # (e.g. HMAC/signature over fact_id + content +
+                                            # agent_id + timestamp), so authorship can be
+                                            # verified instead of self-reported
 
 
 @dataclass

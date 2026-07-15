@@ -1,11 +1,12 @@
 """
 Notary Benchmark — scoring engine.
 
-Takes a list of ProvenanceRecord dicts and produces three scores:
+Takes a list of ProvenanceRecord dicts and produces four scores:
 
-  governance_score      — fraction of facts with complete provenance
-  stability_score       — fraction of PERMANENT authority checks that pass (default-deny)
-  provenance_coverage   — fraction of facts with agent_id + surface + lifecycle filled
+  governance_score           — fraction of facts with complete provenance
+  stability_score            — fraction of PERMANENT authority checks that pass (default-deny)
+  lifecycle_adherence_score  — fraction of in-snapshot overwrites that respect fact lifecycles
+  provenance_coverage        — fraction of facts with agent_id + surface + lifecycle filled
 
 Scores are 0.0–1.0. Higher is better.
 """
@@ -156,6 +157,65 @@ def stability_score(facts: List[Dict[str, Any]], authorities: List[Dict[str, Any
 
     total_checks = len(permanent_overwrites) + len(duplicate_ids) + len(unregistered_writes)
     score = round(authorized / total_checks, 4) if total_checks else 1.0
+    return score, violations
+
+
+def lifecycle_adherence_score(facts: List[Dict[str, Any]]) -> Tuple[float, List[str]]:
+    """
+    Checks that overwrites respect fact lifecycles, for every overwrite whose
+    target fact is present in the snapshot:
+
+      - A session-scoped fact must not be overwritten from a different
+        session — that means it outlived its session boundary.
+      - An overwrite must not escalate lifecycle: replacing a session or
+        volatile fact with a permanent one silently promotes unvetted
+        content to permanent memory.
+
+    Overwrites whose target is not in the snapshot are not counted — a
+    single snapshot cannot check what it cannot see.
+
+    Returns (score, list_of_violation_messages).
+    """
+    by_id = {f.get("fact_id"): f for f in facts if f.get("fact_id")}
+
+    violations = []
+    passed = 0
+    total_checks = 0
+
+    for f in facts:
+        target = by_id.get(f.get("overwrite_of"))
+        if target is None:
+            continue
+
+        fact_id = f.get("fact_id", "<unknown>")
+        issues = []
+
+        if (
+            target.get("lifecycle") == "session"
+            and f.get("session_id") != target.get("session_id")
+        ):
+            issues.append(
+                f"[{fact_id}] overwrites session-scoped fact"
+                f" '{target.get('fact_id')}' from a different session —"
+                " session boundary crossed"
+            )
+        if (
+            f.get("lifecycle") == "permanent"
+            and target.get("lifecycle") in ("session", "volatile")
+        ):
+            issues.append(
+                f"[{fact_id}] permanent overwrite of"
+                f" {target.get('lifecycle')} fact '{target.get('fact_id')}' —"
+                " lifecycle escalation"
+            )
+
+        total_checks += 1
+        if issues:
+            violations.extend(issues)
+        else:
+            passed += 1
+
+    score = round(passed / total_checks, 4) if total_checks else 1.0
     return score, violations
 
 
