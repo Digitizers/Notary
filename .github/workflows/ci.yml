@@ -30,3 +30,16 @@ jobs:
       - name: Run sample benchmark
         run: |
           python -m benchmark.runner examples/sample_memory.json
+
+      - name: Gaming vector regression — must produce violations
+        run: |
+          python - <<'EOF'
+          import json
+          from benchmark.scoring import stability_score
+
+          data = json.load(open("tests/gaming_vector.json"))
+          score, violations = stability_score(data.get("facts", []), data.get("authorities", []))
+          assert len(violations) > 0, "gaming vector produced no violations"
+          assert score < 1.0, f"gaming vector scored stability={score}"
+          print(f"OK: gaming vector flagged, stability={score}, violations={len(violations)}")
+          EOF
