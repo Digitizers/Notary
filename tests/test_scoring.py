@@ -321,6 +321,20 @@ class ScoringTests(unittest.TestCase):
         self.assertEqual(score, 0.0)
         self.assertTrue(any("undeclared cross-agent collision" in v for v in violations))
 
+    def test_conflict_does_not_flag_declared_same_id_overwrite_as_collision(self):
+        score, violations = cross_agent_conflict_score([
+            valid_fact(fact_id="f001", agent_id="agent-a"),
+            valid_fact(fact_id="f001", agent_id="agent-b", overwrite_of="f001",
+                       session_id="sess-002", timestamp="2026-05-01T10:00:00Z"),
+        ], authorities=[{
+            "agent_id": "agent-b",
+            "allowed_surfaces": ["user_profile"],
+            "can_overwrite": True,
+        }])
+
+        self.assertEqual(score, 1.0)
+        self.assertEqual(violations, [])
+
     def test_poisoning_flags_confidence_above_ceiling(self):
         score, violations = poisoning_resistance_score([
             valid_fact(fact_id="f001", confidence=0.99),

@@ -338,6 +338,10 @@ def cross_agent_conflict_score(
     by_id_agents: Dict[str, set] = {}
     for f in facts:
         if f.get("lifecycle") == "permanent" and f.get("fact_id") and f.get("agent_id"):
+            if f.get("overwrite_of") == f.get("fact_id"):
+                # A declared in-place replacement is not an undeclared
+                # collision — the overwrite path above already scored it.
+                continue
             by_id_agents.setdefault(f["fact_id"], set()).add(f["agent_id"])
     for fact_id in sorted(by_id_agents):
         agents = by_id_agents[fact_id]
